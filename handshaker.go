@@ -235,9 +235,11 @@ func (s *handshakeFSM) wait(ctx context.Context, c flightConn) (handshakeState, 
 	if errFlight != nil {
 		if alertErr := c.notify(ctx, alertLevelFatal, alertInternalError); alertErr != nil {
 			if errFlight != nil {
+				s.cfg.log.Tracef("[handshake] handshakeErrored %v", alertErr)
 				return handshakeErrored, alertErr
 			}
 		}
+		s.cfg.log.Tracef("[handshake] handshakeErrored %v", errFlight)
 		return handshakeErrored, errFlight
 	}
 
@@ -255,24 +257,31 @@ func (s *handshakeFSM) wait(ctx context.Context, c flightConn) (handshakeState, 
 				}
 			}
 			if err != nil {
+				s.cfg.log.Tracef("[handshake] handshakeErrored %v", err)
 				return handshakeErrored, err
 			}
 			if nextFlight == 0 {
+				s.cfg.log.Tracef("[handshake] breaking the loop")
 				break
 			}
 			s.cfg.log.Tracef("[handshake:%s] %s -> %s", srvCliStr(s.state.isClient), s.currentFlight.String(), nextFlight.String())
 			if nextFlight.isLastRecvFlight() && s.currentFlight == nextFlight {
+				s.cfg.log.Tracef("[handshake] handshakeFinished")
 				return handshakeFinished, nil
 			}
 			s.currentFlight = nextFlight
+			s.cfg.log.Tracef("[handshake] handshakePreparing")
 			return handshakePreparing, nil
 
 		case <-retransmitTimer.C:
 			if !s.retransmit {
+				s.cfg.log.Tracef("[handshake] handshakeWaiting")
 				return handshakeWaiting, nil
 			}
+			s.cfg.log.Tracef("[handshake] handshakeSending")
 			return handshakeSending, nil
 		case <-ctx.Done():
+			s.cfg.log.Tracef("[handshake] handshakeErrored %v", ctx.Err())
 			return handshakeErrored, ctx.Err()
 		}
 	}

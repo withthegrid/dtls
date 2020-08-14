@@ -11,6 +11,7 @@ func flight0Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 	)
 	if !ok {
 		// No valid message received. Keep reading
+		cfg.log.Tracef("[flight0Parse] invalid message")
 		return 0, nil, nil
 	}
 	state.handshakeRecvSequence = seq
@@ -19,16 +20,19 @@ func flight0Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 
 	// Validate type
 	if clientHello, ok = msgs[handshakeTypeClientHello].(*handshakeMessageClientHello); !ok {
+		cfg.log.Tracef("[flight0Parse] clientHello !ok alertInternalError")
 		return 0, &alert{alertLevelFatal, alertInternalError}, nil
 	}
 
 	if !clientHello.version.Equal(protocolVersion1_2) {
+		cfg.log.Tracef("[flight0Parse] alertProtocolVersion")
 		return 0, &alert{alertLevelFatal, alertProtocolVersion}, errUnsupportedProtocolVersion
 	}
 
 	state.remoteRandom = clientHello.random
 
 	if _, ok := findMatchingCipherSuite(clientHello.cipherSuites, cfg.localCipherSuites); !ok {
+		cfg.log.Tracef("[flight0Parse] errCipherSuiteNoIntersection")
 		return 0, &alert{alertLevelFatal, alertInsufficientSecurity}, errCipherSuiteNoIntersection
 	}
 
@@ -38,12 +42,14 @@ func flight0Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 		switch e := extension.(type) {
 		case *extensionSupportedEllipticCurves:
 			if len(e.ellipticCurves) == 0 {
+				cfg.log.Tracef("[flight0Parse] errNoSupportedEllipticCurves")
 				return 0, &alert{alertLevelFatal, alertInsufficientSecurity}, errNoSupportedEllipticCurves
 			}
 			state.namedCurve = e.ellipticCurves[0]
 		case *extensionUseSRTP:
 			profile, ok := findMatchingSRTPProfile(e.protectionProfiles, cfg.localSRTPProtectionProfiles)
 			if !ok {
+				cfg.log.Tracef("[flight0Parse] errServerNoMatchingSRTPProfile")
 				return 0, &alert{alertLevelFatal, alertInsufficientSecurity}, errServerNoMatchingSRTPProfile
 			}
 			state.srtpProtectionProfile = profile
@@ -57,6 +63,7 @@ func flight0Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 	}
 
 	if cfg.extendedMasterSecret == RequireExtendedMasterSecret && !state.extendedMasterSecret {
+		cfg.log.Tracef("[flight0Parse] errServerRequiredButNoClientEMS")
 		return 0, &alert{alertLevelFatal, alertInsufficientSecurity}, errServerRequiredButNoClientEMS
 	}
 
@@ -64,10 +71,12 @@ func flight0Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 		var err error
 		state.localKeypair, err = generateKeypair(state.namedCurve)
 		if err != nil {
+			cfg.log.Tracef("[flight0Parse] generateKeypair failed %v", err)
 			return 0, &alert{alertLevelFatal, alertIllegalParameter}, err
 		}
 	}
 
+	cfg.log.Tracef("[flight0Parse] -> flight2")
 	return flight2, nil, nil
 }
 

@@ -12,6 +12,7 @@ func flight2Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 	if !ok {
 		// Client may retransmit the first ClientHello when HelloVerifyRequest is dropped.
 		// Parse as flight 0 in this case.
+		cfg.log.Tracef("[flight2Parse] -> flight0Parse")
 		return flight0Parse(ctx, c, state, cache, cfg)
 	}
 	state.handshakeRecvSequence = seq
@@ -20,19 +21,25 @@ func flight2Parse(ctx context.Context, c flightConn, state *State, cache *handsh
 
 	// Validate type
 	if clientHello, ok = msgs[handshakeTypeClientHello].(*handshakeMessageClientHello); !ok {
+		cfg.log.Tracef("[flight2Parse] clientHello !ok alertInternalError")
 		return 0, &alert{alertLevelFatal, alertInternalError}, nil
 	}
 
 	if !clientHello.version.Equal(protocolVersion1_2) {
+		cfg.log.Tracef("[flight2Parse] clientHello alertProtocolVersion")
 		return 0, &alert{alertLevelFatal, alertProtocolVersion}, errUnsupportedProtocolVersion
 	}
 
 	if len(clientHello.cookie) == 0 {
+		cfg.log.Tracef("[flight2Parse] clientHello.cookie empty")
 		return 0, nil, nil
 	}
 	if !bytes.Equal(state.cookie, clientHello.cookie) {
+		cfg.log.Tracef("[flight2Parse] clientHello.cookie mismatch")
 		return 0, &alert{alertLevelFatal, alertAccessDenied}, errCookieMismatch
 	}
+
+	cfg.log.Tracef("[flight2Parse] -> flight4")
 	return flight4, nil, nil
 }
 
