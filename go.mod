@@ -10,3 +10,7 @@ require (
 )
 
 go 1.13
+
+replace (
+	github.com/pion/logging => ./modules/logging
+)
