@@ -1,3 +1,22 @@
+# Reproduce issue
+
+To reproduce run the test PSK server with multiple clients in parallel.
+
+- Start server.
+  ```shell
+  $ go run ./examples/listen/psk/
+  ```
+- Start multiple clients.
+  ```shell
+  mkdir -p build && go build -o build/ ./examples/dial/psk && for i in {1..10}; do ./build/psk <<< 'exit' &; done
+  ```
+
+The outputs should that the client are processing the handshakes intertwined, so the logs from one identifier are mixed with the other ones. On the server the logs from one identifier are in a block. So the full handshake for one identifier is logged before the handshake for the next identifier starts.
+
+---
+
+---
+
 <h1 align="center">
   <br>
   Pion DTLS
