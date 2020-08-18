@@ -8,6 +8,7 @@ import (
 
 	"github.com/pion/dtls/v2"
 	"github.com/pion/dtls/v2/examples/util"
+	"github.com/pion/logging"
 )
 
 func main() {
@@ -19,6 +20,8 @@ func main() {
 	//
 
 	// Prepare the configuration of the DTLS connection
+	loggerFactory := logging.NewDefaultLoggerFactory()
+	loggerFactory.DefaultLogLevel = logging.LogLevelTrace
 	config := &dtls.Config{
 		PSK: func(hint []byte) ([]byte, error) {
 			fmt.Printf("Server's hint: %s \n", hint)
@@ -27,6 +30,7 @@ func main() {
 		PSKIdentityHint:      []byte("Pion DTLS Server"),
 		CipherSuites:         []dtls.CipherSuiteID{dtls.TLS_PSK_WITH_AES_128_CCM_8},
 		ExtendedMasterSecret: dtls.RequireExtendedMasterSecret,
+		LoggerFactory:        loggerFactory,
 	}
 
 	// Connect to a DTLS server

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pion/dtls/v2"
 	"github.com/pion/dtls/v2/examples/util"
+	"github.com/pion/logging"
 )
 
 func main() {
@@ -23,6 +24,8 @@ func main() {
 	//
 
 	// Prepare the configuration of the DTLS connection
+	loggerFactory := logging.NewDefaultLoggerFactory()
+	loggerFactory.DefaultLogLevel = logging.LogLevelTrace
 	config := &dtls.Config{
 		PSK: func(hint []byte) ([]byte, error) {
 			fmt.Printf("Client's hint: %s \n", hint)
@@ -35,6 +38,7 @@ func main() {
 		ConnectContextMaker: func() (context.Context, func()) {
 			return context.WithTimeout(ctx, 30*time.Second)
 		},
+		LoggerFactory: loggerFactory,
 	}
 
 	// Connect to a DTLS server
