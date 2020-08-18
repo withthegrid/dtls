@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -138,6 +139,9 @@ func newHandshakeFSM(
 	}
 }
 
+var seededRand *rand.Rand = rand.New(
+	rand.NewSource(time.Now().UnixNano()))
+
 func (s *handshakeFSM) Run(ctx context.Context, c flightConn, initialState handshakeState) error {
 	state := initialState
 	defer func() {
@@ -156,6 +160,13 @@ func (s *handshakeFSM) Run(ctx context.Context, c flightConn, initialState hands
 			state, err = s.send(ctx, c)
 		case handshakeWaiting:
 			state, err = s.wait(ctx, c)
+			if s.state.isClient {
+				sleepDuration := time.Millisecond * time.Duration(50+seededRand.Intn(200))
+				s.cfg.log.Tracef("[handshake:%s] %s: %s but sleeping for %s",
+					srvCliStr(s.state.isClient), s.currentFlight.String(),
+					state.String(), sleepDuration)
+				time.Sleep(sleepDuration)
+			}
 		case handshakeFinished:
 			state, err = s.finish(ctx, c)
 		default:
