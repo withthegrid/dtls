@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Use this abstraction to ensure thread-safe access to the logger's io.Writer
@@ -149,6 +151,24 @@ func (ll *DefaultLeveledLogger) Errorf(format string, args ...interface{}) {
 	ll.logf(ll.err, LogLevelError, format, args...)
 }
 
+const charset = "abcdefghijklmnopqrstuvwxyz" +
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+var seededRand *rand.Rand = rand.New(
+	rand.NewSource(time.Now().UnixNano()))
+
+func StringWithCharset(length int, charset string) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func RandString(length int) string {
+	return StringWithCharset(length, charset)
+}
+
 // NewDefaultLeveledLoggerForScope returns a configured LeveledLogger
 func NewDefaultLeveledLoggerForScope(scope string, level LogLevel, writer io.Writer) *DefaultLeveledLogger {
 	if writer == nil {
@@ -158,12 +178,13 @@ func NewDefaultLeveledLoggerForScope(scope string, level LogLevel, writer io.Wri
 		writer: &loggerWriter{output: writer},
 		level:  level,
 	}
+	prefix := RandString(6)
 	return logger.
-		WithTraceLogger(log.New(logger.writer, fmt.Sprintf("%s TRACE: ", scope), log.Lmicroseconds|log.Lshortfile)).
-		WithDebugLogger(log.New(logger.writer, fmt.Sprintf("%s DEBUG: ", scope), log.Lmicroseconds|log.Lshortfile)).
-		WithInfoLogger(log.New(logger.writer, fmt.Sprintf("%s INFO: ", scope), log.LstdFlags)).
-		WithWarnLogger(log.New(logger.writer, fmt.Sprintf("%s WARNING: ", scope), log.LstdFlags)).
-		WithErrorLogger(log.New(logger.writer, fmt.Sprintf("%s ERROR: ", scope), log.LstdFlags))
+		WithTraceLogger(log.New(logger.writer, fmt.Sprintf("%s %s TRACE: ", prefix, scope), log.Lmicroseconds|log.Lshortfile)).
+		WithDebugLogger(log.New(logger.writer, fmt.Sprintf("%s %s DEBUG: ", prefix, scope), log.Lmicroseconds|log.Lshortfile)).
+		WithInfoLogger(log.New(logger.writer, fmt.Sprintf("%s %s INFO: ", prefix, scope), log.LstdFlags)).
+		WithWarnLogger(log.New(logger.writer, fmt.Sprintf("%s %s WARNING: ", prefix, scope), log.LstdFlags)).
+		WithErrorLogger(log.New(logger.writer, fmt.Sprintf("%s %s ERROR: ", prefix, scope), log.LstdFlags))
 }
 
 // DefaultLoggerFactory define levels by scopes and creates new DefaultLeveledLogger
