@@ -53,23 +53,25 @@ func main() {
 	// Simulate a chat session
 	hub := util.NewHub()
 
-	go func() {
-		for {
-			// Wait for a connection.
-			conn, err := listener.Accept()
-			util.Check(err)
-			// defer conn.Close() // TODO: graceful shutdown
+	for i := 0; i <= 5; i++ {
+		go func() {
+			for {
+				// Wait for a connection.
+				conn, err := listener.Accept()
+				util.Check(err)
+				// defer conn.Close() // TODO: graceful shutdown
 
-			// `conn` is of type `net.Conn` but may be casted to `dtls.Conn`
-			// using `dtlsConn := conn.(*dtls.Conn)` in order to to expose
-			// functions like `ConnectionState` etc.
+				// `conn` is of type `net.Conn` but may be casted to `dtls.Conn`
+				// using `dtlsConn := conn.(*dtls.Conn)` in order to to expose
+				// functions like `ConnectionState` etc.
 
-			// Register the connection with the chat hub
-			if err == nil {
-				hub.Register(conn)
+				// Register the connection with the chat hub
+				if err == nil {
+					hub.Register(conn)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// Start chatting
 	hub.Chat()
